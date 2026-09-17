@@ -1,7 +1,11 @@
-# 题库内容与个人数据一律不入库
+# 题库内容与个人数据一律不入库（examples/ 内的虚构示例除外，供测试与演示使用）
 题库数据/
 作答/
 批改记录/
 主观题真题整理/
 node_modules/
 *.log
+!examples/题库数据/
+!examples/题库数据/**
+!examples/作答/
+!examples/作答/**
