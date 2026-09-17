@@ -106,7 +106,7 @@ function main() {
   const want = year ? year[1] : null;
   let q = null;
   if (want) q = questions.find(x => yearOf(x) === want);
-  if (!q && want) q = questions.find(x => String(q.sn || '').includes(want));
+  if (!q && want) q = questions.find(x => String(x.sn || '').includes(want));
   if (!q) {
     console.error(`未找到 ${sub.name} ${yearArg} 的题目。可用：`);
     questions.forEach(x => console.error(`  ${yearOf(x)}年 ${x.snText || x.sn}`));
@@ -152,4 +152,7 @@ function main() {
   console.log(out.join('\n'));
 }
 
-main();
+if (require.main === module) main();
+
+// 供单元测试复用（node --test tests/）；直接命令行执行时行为不变
+module.exports = { stripHtml, safeJson, pickSubject, yearOf, parsePoints, SUBJECT_MAP };
