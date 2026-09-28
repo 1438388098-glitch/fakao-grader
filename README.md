@@ -1,76 +1,76 @@
-# fakao-grader ⚖️ 法考主观题 AI 评分老师
+English · [简体中文](./README.zh-CN.md)
+
+# fakao-grader ⚖️ AI Grader for China's Bar-Exam (法考) Essay Questions
 
 [![CI](https://github.com/1438388098-glitch/fakao-grader/actions/workflows/ci.yml/badge.svg)](https://github.com/1438388098-glitch/fakao-grader/actions/workflows/ci.yml)
 
-> **English TL;DR** — An Agent Skill that grades China's bar-exam (法考) essay answers **point-by-point against the official scoring rubric**, not an impression score. The rubric is extracted deterministically from exam-bank export data (per-point weights, equivalence whitelists, contradiction blacklists); grading stability is guarded by calibration samples, per-point confidence, and forced second-pass review at medium confidence. Ships with unit tests, CI, and a defined grading-consistency protocol in [docs/eval.md](docs/eval.md).
+An Agent Skill that runs inside AI coding assistants (ZCode, Claude Code, and other agent CLIs): hand it your essay answer and it grades **point-by-point against the official scoring rubric** — the way a human grader would — not with an impression score. It outputs a deep review report and tracks your weak spots over time. The rubric is extracted deterministically from exam-bank export data (per-point weights, equivalence whitelists, contradiction blacklists); grading stability is guarded by calibration samples, per-point confidence labels, and forced second-pass review at medium confidence. Ships with unit tests, CI, and a defined grading-consistency protocol in [docs/eval.md](docs/eval.md).
 
-一个运行在 AI 编程助手（ZCode / Claude Code 等 Agent CLI）里的 **Agent Skill**：把你练的主观题答案交给它，它像阅卷人一样**按官方采分点逐点严格判分**，输出深度复盘报告，并长期追踪你的薄弱点。
+> **This project is only a "grading tool" and contains no questions, answers, or explanations.** Exam-bank content belongs to the platforms that publish it. Use your own lawful account to fetch the data and store it locally (see "Exam-Bank Data" below).
 
-> **本项目只是一个"批改工具"，不包含任何题目、答案、解析。** 题库内容归各平台所有，你需要用自己在题库平台的合法账号获取数据并存放到本地（见下文"题库数据"）。
+## What It Does
 
-## 它能做什么
+- **Per-point verdicts** ✓ (meaning-equivalent, full credit) / △ (partially on point, half credit) / ✗ (not addressed or wrong characterization, no negative marking) — not a holistic impression score
+- **Three point types** — conclusion / basis (rule, statute, elements) / analysis — so "rule memorized right but conclusion written wrong" is decomposed precisely
+- **Cascade-loss warning**: when a wrong characterization collapses downstream points within the same sub-question, the dependency chain is drawn explicitly so you see the true cost of the error
+- **Dual scores**: the rubric-points score (training metric) plus an estimated exam band, converted per the real-world grading convention of "assign a band first, then award points within the band" (a ±3-point range)
+- **Deep review report**: per-point comparison table (quoting the matching sentences from your answer) / your wording vs. the reference answer on key passages / structure check (conclusion-first, syllogism completeness) / phrasing polish and explicit praise / statute lookup hints / improvement suggestions ranked by cost-effectiveness
+- **Score tracking**: grading records are appended to a CSV; cross-question statistics identify your biggest loss type (conclusions? bases? memorization?) and drive a data-backed next step
+- **Grading-stability mechanisms**: SKILL.md ships built-in calibration samples that anchor the strictness scale; every point carries a confidence label; medium/low-confidence points are forced through a second-pass review; ties go to the candidate
 
-- **逐采分点判定** ✓（意思等价给分）／ △（沾边半分）／ ✗（未涉及或定性错误，不倒扣）——不是整段印象分
-- **采分点三类标注**：结论点 / 依据点 / 分析点——"规则背对了但结论写反"会被精确拆出来
-- **连锁失分警示**：定性错误导致问内后续采分点崩塌时，显式画出依赖链，让你看到结论写错的真实代价
-- **双分数**：采分点得分（训练口径）+ 考场预估带（按真实阅卷"先定档、档内采点"口径折算，±3 分区间）
-- **深度复盘报告**：逐点对照表（附你答案中的原文对应句）／ 原文 vs 参考答案关键段对照 ／ 结构检查（结论前置、三段论完整性）／ 表述优化与表扬 ／ 法条检索提示 ／ 按性价比排序的提分建议
-- **成绩追踪**：批改记录沉淀到 CSV，跨题目统计你最大丢分类型（结论？依据？背诵？），给出数据驱动的下一步建议
-- **判分稳定性机制**：SKILL.md 内置校准样例锚定宽严尺；每个采分点标注置信度，中低置信点强制二次复核；存疑从宽
-
-## 工作原理
+## How It Works
 
 ```
-题库数据 JSON ──extract.js──> 评分作业单（采分点+分值+白/黑名单+参考答案）
-                                    │
-考生作答（作答\科目-年份.md）──────┤
-                                    ▼
-                            AI 按 SKILL.md 判卷
-                                    ▼
-                    深度复盘报告 + 成绩追踪 CSV
+exam-bank JSON ──extract.js──> scoring worksheet (points + weights + white/black lists + reference answer)
+                                        │
+candidate answer (作答\subject-year.md) ┤
+                                        ▼
+                             AI grades per SKILL.md
+                                        ▼
+                    deep review report + score-tracking CSV
 ```
 
-关键设计：多数题库平台的导出数据里，`subKeyWord` 字段本身就是**结构化评分标准**（每个采分点带分值、等义表述白名单、矛盾表述黑名单）。本工具直接复用这份官方细则，而不是让 AI 凭印象打分——实测中采分点分值之和与题目分值精确吻合。
+Key design: in most exam-bank platforms' export data, the `subKeyWord` field is itself a **structured scoring standard** (each point carries its weight, an equivalence whitelist, and a contradiction blacklist). This tool reuses that official detail directly instead of letting the AI grade by impression — measured against the real bank, the per-point weights sum exactly to the question's score.
 
-## 快速体验（examples/）
+## Quick Demo (examples/)
 
-[examples/](examples/) 提供一套**全程虚构**的端到端示例：虚构题库 → `extract.js` 实际生成的评分作业单 → 虚构作答 → 报告形态示例。其中作业单抽取是确定性脚本行为，可一键复现：
+[examples/](examples/) provides a fully **fictional** end-to-end sample: a fictional question bank → the scoring worksheet actually generated by `extract.js` → a fictional answer → a specimen report. Worksheet extraction is deterministic script behavior, reproducible in one command:
 
 ```bash
 FAKAO_DATA_DIR="$(pwd)/examples/题库数据" node scripts/extract.js 刑法 9001
 ```
 
-## 环境要求
+## Requirements
 
-- [ZCode](https://zcode.ai) / Claude Code 或其他支持 Agent Skills 的 CLI
+- [ZCode](https://zcode.ai), Claude Code, or any CLI that supports Agent Skills
 - Node.js ≥ 18
 
-## 安装
+## Installation
 
 ```bash
-git clone https://github.com/<你的用户名>/fakao-grader.git
-# 把 skill 目录放进 agent 的技能目录，例如（ZCode）：
+git clone https://github.com/<your-username>/fakao-grader.git
+# put the skill directory into your agent's skills directory, e.g. (ZCode):
 #   cp -r fakao-grader ~/.zcode/skills/
 ```
 
-## 题库数据
+## Exam-Bank Data
 
-在备考工作区准备 `题库数据/` 目录，放入按科目命名的 JSON 文件（`刑法_raw.json`、`民法_raw.json`……）：
+Prepare a `题库数据/` directory in your study workspace and drop in per-subject JSON files (`刑法_raw.json`, `民法_raw.json`, …):
 
 ```jsonc
 {
   "data": [
     {
-      "question": "题干（支持 HTML）",
+      "question": "question stem (HTML supported)",
       "score": 32,
       "sn": "2025-03-1-1",
       "snText": "2025年·真题·第2题",
       "subList": [
         {
-          "subQuestion": "第1小问",
+          "subQuestion": "sub-question 1",
           "subScore": 8,
-          "answer": "参考答案",
-          "subKeyWord": "[{\"text\":\"采分点1\",\"score\":1,\"whiteList\":[{\"text\":\"等义表述\"}],\"blackList\":[{\"text\":\"矛盾表述\"}]}, ...]"
+          "answer": "reference answer",
+          "subKeyWord": "[{\"text\":\"scoring point 1\",\"score\":1,\"whiteList\":[{\"text\":\"equivalent phrasing\"}],\"blackList\":[{\"text\":\"contradicting phrasing\"}]}, ...]"
         }
       ]
     }
@@ -78,59 +78,59 @@ git clone https://github.com/<你的用户名>/fakao-grader.git
 }
 ```
 
-- `subKeyWord` 是 **JSON 字符串**，每个元素：`text` 采分点、`score` 分值、`whiteList` 等义白名单、`blackList` 矛盾黑名单
-- 没有 `subKeyWord` 的小问也不影响使用：评分老师会依参考答案自行拆点、均分该问分值
+- `subKeyWord` is a **JSON string**; each element is: `text` (the scoring point), `score` (its weight), `whiteList` (equivalent phrasings), `blackList` (contradicting phrasings)
+- Sub-questions without `subKeyWord` still work: the grader splits points from the reference answer and divides the sub-score evenly among them
 
-**数据获取**：请使用你自己在题库平台的账号权限获取，并遵守该平台的服务条款。题目、答案、解析的著作权归平台/命题方所有，导出的数据仅供你个人本地学习使用，**请勿公开传播**。
+**Data acquisition**: use your own account on the exam-bank platform and comply with its terms of service. Copyright in the questions, answers, and explanations belongs to the platform / exam authors; exported data is for your personal local study only — **do not redistribute it**.
 
-## 使用
+## Usage
 
 ```markdown
-1. 写答案：作答\刑法-2025.md（建议结论前置、按问分点）
-2. 对 AI 说："批改刑法 2025"
-3. 得到：深度复盘报告（存档到 批改记录\）+ 成绩追踪更新 + 下一步建议
+1. Write your answer: 作答\刑法-2025.md (conclusion first, point by point recommended)
+2. Tell the agent: "批改刑法 2025" (grade criminal law 2025)
+3. Get: a deep review report (archived under 批改记录\) + a score-tracking update + next-step advice
 ```
 
-抽取指定题目也可以手动执行：
+Manual extraction of a specific question also works:
 
 ```bash
-node scripts/extract.js 刑法 2025        # 输出评分作业单
-node scripts/extract.js 刑法             # 列出该科目全部题目
-# 数据不在默认位置时：FAKAO_DATA_DIR=path\to\题库数据
+node scripts/extract.js 刑法 2025        # output the scoring worksheet
+node scripts/extract.js 刑法             # list every question in the subject
+# when the data lives elsewhere: FAKAO_DATA_DIR=path\to\题库数据
 ```
 
-## 判分规则摘要
+## Grading Rules at a Glance
 
-| 判定 | 标准 | 给分 |
+| Verdict | Standard | Credit |
 |---|---|---|
-| ✓ | 意思等价（白名单命中直接 ✓） | 满分 |
-| △ | 只写结论没展开 / 概念提到论证不全 | 半分 |
-| ✗ | 未涉及、命中黑名单、定性错误 | 0 分，不倒扣 |
+| ✓ | Meaning-equivalent (phrasings on the whitelist are an automatic ✓) | full |
+| △ | Conclusion stated without elaboration / concept named but argument incomplete | half |
+| ✗ | Not addressed, blacklist hit, or wrong characterization | 0, no negative marking |
 
-黑名单只作用于考生自己的定性行（引述对方观点不触发，但会提示卷面风险）；法条答出关键内容即可、不要求背条文号；"能否追偿"类问题会先检查"责任是否实际发生"这一前提——这些细则全部写在 [SKILL.md](SKILL.md)，可按自己口味调整。
+The blacklist applies only to the candidate's own characterization and conclusion sentences (quoting the opposing view does not trigger ✗, though it is flagged as a presentation risk); a statute scores once its key content appears, no article number required; for "can X recover?" questions the grader first checks the premise that liability has actually arisen — all such details live in [SKILL.md](SKILL.md) and are yours to tune.
 
-## 问题与边界
+## Problem & Boundaries
 
-- **解决什么**：法考主观题备考中「答完没人改、改了不知道差哪」——按官方采分点逐点定位丢分，而不是给一个印象总分
-- **不做什么**：不包含题目数据（著作权边界）；不预测分数、不替代官方评分；AI 判分有 ±3 分波动，定位是「丢分点清单生成器」
-- **人工兜底位**：中低置信采分点强制二次复核并在报告中明示；最终理解以官方规则为准
+- **What it solves**: in bar-exam essay prep, "finished but nobody grades it; graded but no idea where the points went" — it locates losses point-by-point against the official rubric instead of handing you an impression total
+- **What it does not do**: it includes no question data (copyright boundary); it does not predict scores or replace official grading; AI grading fluctuates ±3 points, so the tool is positioned as a "loss-point checklist generator"
+- **Human fallback**: medium/low-confidence points go through a forced second-pass review and are flagged in the report; where interpretations differ, the official rules prevail
 
-## 验证
+## Verification
 
-- **确定性部分有测试**：`node --test tests/extract.test.js`（15 例：抽题、采分点解析、白/黑名单、CLI 端到端），GitHub Actions 每次 push 自动运行
-- **AI 判分部分有协议**：判分一致性评测协议见 [docs/eval.md](docs/eval.md)（N=10 独立批改 → 点级一致率 / 总分标准差 / 预估带重叠率），协议已定义、待在真实题库上执行——**仓库内不提供未实际运行的评测数字**
-- **宽严尺锚定**：SKILL.md 内置校准样例（等义改写给分、半分情形、连锁失分触发条件），每次批改前先对齐
+- **The deterministic part is tested**: `node --test tests/extract.test.js` (15 cases: question extraction, point parsing, white/black lists, CLI end-to-end); GitHub Actions runs it on every push
+- **The AI part has a protocol**: the grading-consistency evaluation protocol is specified in [docs/eval.md](docs/eval.md) (N=10 independent gradings → per-point agreement rate / score standard deviation / band overlap rate). The protocol is defined but **not yet executed** on a real question bank — this repository deliberately ships no evaluation numbers that were never produced
+- **Anchored strictness**: SKILL.md ships built-in calibration samples (equivalent paraphrase credited, half-credit situations, cascade-loss triggers) that are aligned before every grading
 
-## 已知限制
+## Known Limitations
 
-- AI 判分存在 ±3 分波动（报告内已声明；关注丢分点清单比纠结 1~2 分更有价值）
-- 约两成小问无结构化采分点，由 AI 依参考答案自行拆点，客观性略低
-- v1 仅支持本地题库的 34 道真题体系；自定义题（自带评分标准）模式待扩展
-- 理论法论述题按关键词点判分偏机械，已用"定档"机制部分补偿，仍建议人工复核
+- AI grading fluctuates ±3 points (stated in every report; the loss-point checklist matters more than agonizing over 1–2 points)
+- Roughly one in five sub-questions has no structured scoring points; the AI splits them from the reference answer, which is slightly less objective
+- v1 covers only the local bank's 34 real questions; a custom-question mode (bring your own rubric) is planned
+- Grading theory-subject essays by keyword points is mechanical; a "banding" mechanism partially compensates, but human review is still advised
 
-## 设计文档
+## Design Notes
 
-[DESIGN.md](DESIGN.md) 记录了完整设计决策与网络调研修正：真实阅卷"先定档、档内采点"口径、三段论采分点分类、定性错误连锁处理、LLM 评分稳定性机制等。
+[DESIGN.md](DESIGN.md) records the full design decisions and research-driven corrections: the real-world "band first, then points within the band" grading convention, syllogism-based point typing, cascade handling of wrong characterizations, and LLM scoring-stability mechanisms.
 
 ## License
 
