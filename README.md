@@ -1,5 +1,9 @@
 # fakao-grader ⚖️ 法考主观题 AI 评分老师
 
+[![CI](https://github.com/1438388098-glitch/fakao-grader/actions/workflows/ci.yml/badge.svg)](https://github.com/1438388098-glitch/fakao-grader/actions/workflows/ci.yml)
+
+> **English TL;DR** — An Agent Skill that grades China's bar-exam (法考) essay answers **point-by-point against the official scoring rubric**, not an impression score. The rubric is extracted deterministically from exam-bank export data (per-point weights, equivalence whitelists, contradiction blacklists); grading stability is guarded by calibration samples, per-point confidence, and forced second-pass review at medium confidence. Ships with unit tests, CI, and a defined grading-consistency protocol in [docs/eval.md](docs/eval.md).
+
 一个运行在 AI 编程助手（ZCode / Claude Code 等 Agent CLI）里的 **Agent Skill**：把你练的主观题答案交给它，它像阅卷人一样**按官方采分点逐点严格判分**，输出深度复盘报告，并长期追踪你的薄弱点。
 
 > **本项目只是一个"批改工具"，不包含任何题目、答案、解析。** 题库内容归各平台所有，你需要用自己在题库平台的合法账号获取数据并存放到本地（见下文"题库数据"）。
