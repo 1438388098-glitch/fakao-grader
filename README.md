@@ -48,7 +48,7 @@ FAKAO_DATA_DIR="$(pwd)/examples/题库数据" node scripts/extract.js 刑法 900
 ## Installation
 
 ```bash
-git clone https://github.com/<your-username>/fakao-grader.git
+git clone https://github.com/1438388098-glitch/fakao-grader.git
 # put the skill directory into your agent's skills directory, e.g. (ZCode):
 #   cp -r fakao-grader ~/.zcode/skills/
 ```
