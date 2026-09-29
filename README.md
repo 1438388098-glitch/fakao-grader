@@ -30,7 +30,7 @@ candidate answer (作答\subject-year.md) ┤
                     deep review report + score-tracking CSV
 ```
 
-Key design: in most exam-bank platforms' export data, the `subKeyWord` field is itself a **structured scoring standard** (each point carries its weight, an equivalence whitelist, and a contradiction blacklist). This tool reuses that official detail directly instead of letting the AI grade by impression — measured against the real bank, the per-point weights sum exactly to the question's score.
+Key design: in most exam-bank platforms' export data, the `subKeyWord` field is itself a **structured scoring standard** (each point carries its weight, an equivalence whitelist, and a contradiction blacklist). This tool reuses that official detail directly instead of letting the AI grade by impression — measured against the real bank, the per-point weights sum exactly to the question's score, with one known exception: a 2022 criminal-law question whose platform score is missing (0) is graded by the sum of point weights instead; all other measured questions match exactly.
 
 ## Quick Demo (examples/)
 
